@@ -8,6 +8,10 @@ pip3 install pipenv
 # to install all required dependencies for project
 pipenv install
 
+# to enter pipenv virtual env subshell, has all packages installed from Pipfile in this environment (separate from main shell environment)
+# type exit in terminal if want to exit pipenv shell
+pipenv shell
+
 # to add new packages to Pipfile
 pipenv install package1 package2 
 ```
