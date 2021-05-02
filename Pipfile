@@ -8,6 +8,8 @@ gspread = "*"
 google-auth = "*"
 python-dotenv = "*"
 slack-sdk = "*"
+aiohttp = "*"
+aiodns = "*"
 
 [dev-packages]
 
