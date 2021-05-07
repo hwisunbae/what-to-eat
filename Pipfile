@@ -10,6 +10,7 @@ python-dotenv = "*"
 slack-sdk = "*"
 aiohttp = "*"
 aiodns = "*"
+flask = "*"
 
 [dev-packages]
 
