@@ -26,6 +26,6 @@ pipenv install package1 package2
 # To run local web server for development
 # WARNING: ngrok url will change everytime you restart webserver
 #          change redirect URL in the lunch bot's app everytime
-./ngrok http (any available port #) e.g. ./ngrok http 80
+./ngrok http (any available port #) e.g. ./ngrok http 6767
 ```
-![image](https://user-images.githubusercontent.com/31826240/117517669-b7cd2080-af6a-11eb-83b4-609a29c9e1d2.png)
+![image](https://user-images.githubusercontent.com/31826240/117553049-2c609780-b01d-11eb-8dae-808420bf9918.png)
