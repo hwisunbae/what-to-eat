@@ -29,3 +29,12 @@ pipenv install package1 package2
 ./ngrok http (any available port #) e.g. ./ngrok http 6767
 ```
 ![image](https://user-images.githubusercontent.com/31826240/117553049-2c609780-b01d-11eb-8dae-808420bf9918.png)
+
+# Flask links
+https://flask.palletsprojects.com/en/1.1.x/quickstart/#quickstart
+
+
+https://flask.palletsprojects.com/en/1.1.x/cli/#cli
+
+
+https://flask.palletsprojects.com/en/1.1.x/server/#server
