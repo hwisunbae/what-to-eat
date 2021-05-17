@@ -34,7 +34,6 @@ client = WebClient(SLACK_BOT_TOKEN)
 BOT_ID = client.api_call('auth.test')['user_id']
 
 
-
 # DEBUG
 client.chat_postMessage(channel='test2', text='App started')
 
