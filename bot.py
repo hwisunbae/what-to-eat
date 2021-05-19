@@ -33,9 +33,9 @@ slack_events_adapter = SlackEventAdapter(SLACK_SIGNING_SECRET, "/slack/events", 
 client = WebClient(SLACK_BOT_TOKEN)
 BOT_ID = client.api_call('auth.test')['user_id']
 
-
+CHANNEL_NAME = 'test2'
 # DEBUG
-client.chat_postMessage(channel='test2', text='App started')
+client.chat_postMessage(channel=CHANNEL_NAME, text='App started')
 
 # An example of one of your Flask app's routes
 @app.route("/")
@@ -58,7 +58,29 @@ def handle_message(event_data):
 # TODO: lunch-vote should take data from a google sheet and list all items and let the user to vote
 @app.route('/lunch-vote', methods=['POST'])
 def message_count():
-	print(sh.sheet1.get('A1'))
+	print(sh.sheet1.get('A1')) # CONSOLE
+
+	client.chat_postMessage(channel=CHANNEL_NAME, 
+		attachments=[{
+			"title": "우리동네 북어국",
+            "title_link": "https://api.slack.com/",
+			'fields': [
+				{
+					"title": "대표 메뉴", 
+					"value": "북어국 6000원", 
+					"mrkdwn_in":["text"],
+					'short': True
+				}, {
+					"title": "추천 정보", 
+					"value": ":thumbsup: " + '0' + '       :thumbsdown: ' + '0', 
+					'short': True
+				}
+			],
+			"color": "#36a64f",
+			"thumb_url": "http://placekitten.com/g/200/200",
+		}]
+	)
+
 	return Response(), 200
 
 if __name__ == '__main__':
