@@ -1,7 +1,9 @@
 # Need to run -> ngrok http 5000 
 
 import os
+import random
 
+from PIL import Image
 from pathlib import Path
 from dotenv import load_dotenv
 from slack_sdk.web import WebClient
@@ -12,6 +14,7 @@ from flask import Flask, Request, Response
 import gspread
 gc = gspread.service_account(filename='./.config/gspread/service_account.json')
 sh = gc.open("lunchbot")
+worksheet = sh.sheet1
 
 # Keep variables safe
 env_path = Path('.')  / '.env'
@@ -37,6 +40,9 @@ CHANNEL_NAME = 'test2'
 # DEBUG
 client.chat_postMessage(channel=CHANNEL_NAME, text='App started')
 
+# attachments colours
+COLOURS = ['#36a64f', '#eefc54', '#ef8432', '#d72e1f']
+
 # An example of one of your Flask app's routes
 @app.route("/")
 def hello():
@@ -56,30 +62,47 @@ def handle_message(event_data):
 		client.chat_postMessage(channel=team_id, text=text)
 
 # TODO: lunch-vote should take data from a google sheet and list all items and let the user to vote
-@app.route('/lunch-vote', methods=['POST'])
+@app.route('/eat', methods=['POST'])
 def message_count():
-	print(sh.sheet1.get('A1')) # CONSOLE
 
-	client.chat_postMessage(channel=CHANNEL_NAME, 
-		attachments=[{
-			"title": "우리동네 북어국",
-            "title_link": "https://api.slack.com/",
-			'fields': [
-				{
-					"title": "대표 메뉴", 
-					"value": "북어국 6000원", 
-					"mrkdwn_in":["text"],
-					'short': True
-				}, {
-					"title": "추천 정보", 
-					"value": ":thumbsup: " + '0' + '       :thumbsdown: ' + '0', 
-					'short': True
-				}
-			],
-			"color": "#36a64f",
-			"thumb_url": "http://placekitten.com/g/200/200",
-		}]
-	)
+	# Rander 4 out of the lists
+	lists = worksheet.col_values(1)[1::]
+	num_to_select = len(COLOURS)
+	selected_items = random.sample(lists, num_to_select)
+	print(selected_items)
+
+	# #https://stackoverflow.com/questions/58186399/how-to-create-a-slack-message-containing-an-uploaded-image
+	# result = client.files_upload(
+	# 	channel=CHANNEL_NAME,
+	# 	initial_comment="It's my file",
+	# 	file='./icons/1.png'
+	# )
+	# print(result['file']['id'])
+	# result2 = client.files_sharedPublicURL(file=result['file']['id'])
+	# print(result2)
+
+	for index, item in enumerate(selected_items):
+		row = worksheet.row_values(item)
+		client.chat_postMessage(channel=CHANNEL_NAME, 
+			attachments=[{
+				"title": row[1],
+	            "title_link": row[2],
+				'fields': [
+					{
+						"title": "Menu Recommended", 
+						"value": row[4] + ' ' + row[5], 
+						"mrkdwn_in":["text"],
+						'short': True
+					}, {
+						"title": "Thumb Signal", 
+						"value": ":thumbsup: " + '0' + '       :thumbsdown: ' + '0', 
+						'short': True
+					}
+				],
+				"color": COLOURS[index],
+				"thumb_url": "http://placekitten.com/g/200/200",
+			}]
+		)
 
 	return Response(), 200
 
