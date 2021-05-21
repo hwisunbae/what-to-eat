@@ -42,6 +42,13 @@ client.chat_postMessage(channel=CHANNEL_NAME, text='App started')
 
 # attachments colours
 COLOURS = ['#36a64f', '#eefc54', '#ef8432', '#d72e1f']
+PHOTOS = ['https://i.imgur.com/ZrZLmZa.png','https://imgur.com/TYNURtM.png',
+		  'https://i.imgur.com/Sxjrtso.png', 'https://imgur.com/1nFZsc7.png',
+		  'https://i.imgur.com/aUELdkg.png', 'https://imgur.com/co2D9cl.png',
+		  '','',
+		  '','',
+		  '','',
+		  '','']
 
 # An example of one of your Flask app's routes
 @app.route("/")
@@ -71,16 +78,6 @@ def message_count():
 	selected_items = random.sample(lists, num_to_select)
 	print(selected_items)
 
-	# #https://stackoverflow.com/questions/58186399/how-to-create-a-slack-message-containing-an-uploaded-image
-	# result = client.files_upload(
-	# 	channel=CHANNEL_NAME,
-	# 	initial_comment="It's my file",
-	# 	file='./icons/1.png'
-	# )
-	# print(result['file']['id'])
-	# result2 = client.files_sharedPublicURL(file=result['file']['id'])
-	# print(result2)
-
 	for index, item in enumerate(selected_items):
 		row = worksheet.row_values(item)
 		client.chat_postMessage(channel=CHANNEL_NAME, 
@@ -100,7 +97,7 @@ def message_count():
 					}
 				],
 				"color": COLOURS[index],
-				"thumb_url": "http://placekitten.com/g/200/200",
+				"thumb_url": PHOTOS[int(row[6])],
 			}]
 		)
 
