@@ -2,12 +2,14 @@
 
 import os
 import random
+import json
 
 from pathlib import Path
 from dotenv import load_dotenv
 from slack_sdk.web import WebClient
 from slackeventsapi import SlackEventAdapter
-from flask import Flask, Request, Response
+from flask import Flask, Response, make_response, request
+from datetime import datetime, timedelta
 
 from WelcomeMessage import *
 
@@ -43,6 +45,11 @@ client.chat_postMessage(channel=CHANNEL_NAME, text='App started')
 message_counts = {}
 welcome_messages = {}
 
+SCHEDULED_MESSAGES = [
+	{'text': 'first one', 'post_at': (datetime.now() + timedelta(seconds=40)).timestamp(), 'channel': 'C023502CL2D'}, 
+	{'text': 'second one', 'post_at': (datetime.now() + timedelta(seconds=50)).timestamp(), 'channel': 'C023502CL2D'}
+]
+
 # resources
 COLOURS = ['#36a64f', '#eefc54', '#ef8432', '#d72e1f']
 PHOTOS = ['https://i.imgur.com/ZrZLmZa.png','https://i.imgur.com/TYNURtM.png',
@@ -53,8 +60,6 @@ PHOTOS = ['https://i.imgur.com/ZrZLmZa.png','https://i.imgur.com/TYNURtM.png',
 		  'https://i.imgur.com/0jxjDrc.png','https://i.imgur.com/kdyBfuB.png',
 		  'https://i.imgur.com/55Pbyvu.png','https://i.imgur.com/YNj8Ikc.png']
 
-
-
 def send_welcome_message(channel, user):
 	welcome = WelcomeMessage(channel, user)
 	message = welcome.get_message()
@@ -64,6 +69,17 @@ def send_welcome_message(channel, user):
 	if channel not in welcome_messages:
 		welcome_messages[channel] = {}
 	welcome_messages[channel][user] = welcome
+
+def schcdule_messages(messages):
+	ids = []
+	for msg in messages:
+		response = client.chat_scheduleMessage(
+			channel=msg['channel'], 
+			text=msg['text'], 
+			post_at=(datetime.now() + timedelta(seconds=50)).strftime('%s'))
+		id_ = response.get('id')
+		ids.append(id_)
+	return ids
 
 # An example of one of your Flask app's routes
 @app.route("/")
@@ -107,6 +123,8 @@ def handle_eat():
 			attachments = [{
 				"title": row[1],
 	            "title_link": row[2],
+                "fallback": "Upgrade your Slack client to use messages like these.",
+        		"callback_id": "menu_options_2319",
 				'fields': [
 					{
 						"title": ":fire: Menu Recommended", 
@@ -120,24 +138,21 @@ def handle_eat():
 				],
 				"actions": [
 	                {
-	                    "name": "approve_button",
+	                    "name": "thumbs_up",
 	                    "text": ":thumbsup:",
 	                    "type": "button",
 	                    "value": "thumbs_up",
-	                    "style": "primary"
+	                    "style": "primary",
+	                    "data_source": "external",
+	                    "action_id": "up_vote"
 	                },
 	                {
-	                    "name": "vote",
+	                    "name": "thumbs_down",
 	                    "text": ":thumbsdown:",
 	                    "type": "button",
 	                    "value": "thumb_down",
 	                    "style": "danger",
-	                    "confirm": {
-	                        "title": "Are you sure?",
-	                        "text": "Wouldn't you want to go to this place?",
-	                        "ok_text": "Yes",
-	                        "dismiss_text": "No"
-	                    }
+	                    "action_id": "down_vote"
 	                }
 	            ],
 				"color": COLOURS[index],
@@ -146,6 +161,71 @@ def handle_eat():
 		)
 
 	return Response(), 200
+# # message --------------------------------------------------------------------
+# @app.route('/slack/message_options', methods=['POST'])
+# def message_options():
+# 	form_json = json.loads(Request.form['payload'])
+# 	print(form_json)
+# 	menu_options = {
+# 		'options': [
+# 			{
+# 				'text':'Chess',
+# 				'value':'chess'
+# 			},
+# 			{
+# 				'text':'Global war',
+# 				'value':'war'
+# 			}
+# 		]
+# 	}
+# 	return Response(json.dumps(menu_options), mimetype='application/json')
+
+
+@app.route('/slack/message_actions', methods=['POST'])
+def message_actions():
+	json_string = request.form.get('payload')
+	print(json_string)
+	# selection = form_json["actions"][0]["selected_options"][0]["value"]
+
+	# if selection == "war":
+	# 	message_text = "The only winning move is not to play.\nHow about a nice game of chess"
+	# else:
+	# 	message_text = ":horse:"
+
+	# client.chat_scheduleMessage(
+	# 	channel=form_json["channel"]["id"], 
+	# 	ts=form_json["message_ts"],
+	# 	text=message_text,
+	# 	attachments=[]
+	# )
+
+	return Response(), 200
+
+# message_attachments = [
+#     {
+#         "fallback": "Upgrade your Slack client to use messages like these.",
+#         "color": "#3AA3E3",
+#         "attachment_type": "default",
+#         "callback_id": "menu_options_2319",
+#         "actions": [
+#             {
+#                 "name": "games_list",
+#                 "text": "Pick a game...",
+#                 "type": "select",
+#                 "data_source": "external"
+#             }
+#         ]
+#     }
+# ]
+
+# client.chat_postMessage(
+# 	channel="C020XBWKJ6B",
+# 	text="Shall we play a game?",
+# 	attachments=message_attachments,
+# 	post_at = (datetime.now() + timedelta(seconds=10)).strftime('%s')
+# )
+# message --------------------------------------------------------------------
+
 
 @slack_events_adapter.on('reaction_added')
 def reaction(payload):
@@ -171,8 +251,10 @@ def reaction(payload):
 # https://api.slack.com/best-practices/blueprints/actionable-notifications
 @app.route('/vote', methods=['POST'])
 def webhook():
-	print(Request.data)
+	print(request.data)
 	return Response(), 200
 
 if __name__ == '__main__':
+	schcdule_messages(SCHEDULED_MESSAGES)
 	app.run(port=5000, debug=True)
+	
