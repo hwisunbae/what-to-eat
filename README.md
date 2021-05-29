@@ -1,3 +1,4 @@
+
 # lunchbot
 
 # PIPENV PACKAGE MANAGER 
@@ -30,6 +31,20 @@ pipenv install package1 package2
 ```
 ![image](https://user-images.githubusercontent.com/31826240/117553049-2c609780-b01d-11eb-8dae-808420bf9918.png)
 
+
+# Configure request URL 
+To run the local development.. you need to configure request URL in Slash Commands, Interactivity & Shortcuts, Event Subscription.
+
+e.g 
+Event Subscriptions > Enable Events
+Request URL : https://request_url.io/slack/events
+
+Slash Commands > /what_to_eat
+Request URL : https://request_url.io/whattoeat
+
+Interactivity & Shortcuts
+Request URL : https://request_url.io/slack/message_actions
+
 # Flask links
 https://flask.palletsprojects.com/en/1.1.x/quickstart/#quickstart
 
@@ -38,3 +53,4 @@ https://flask.palletsprojects.com/en/1.1.x/cli/#cli
 
 
 https://flask.palletsprojects.com/en/1.1.x/server/#server
+
