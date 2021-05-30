@@ -54,3 +54,7 @@ https://flask.palletsprojects.com/en/1.1.x/cli/#cli
 
 https://flask.palletsprojects.com/en/1.1.x/server/#server
 
+
+
+# Further Development
+1. Schedule  message before lunch using schcdule_messages
