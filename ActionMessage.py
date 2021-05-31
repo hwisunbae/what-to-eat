@@ -68,7 +68,7 @@ class ActionMessage:
 	                                "text": ":thumbsup:\t0",
 	                                "emoji": True
 	                            },
-	                            "value": "yes",
+	                            "value": f"up_{index}",
 	                            "style": "primary",
 	                            "action_id": "up_vote"
 	                        },
@@ -79,9 +79,9 @@ class ActionMessage:
 	                                "text": ":thumbsdown:\t0",
 	                                "emoji": True
 	                            },
-	                            "value": "no",
+	                            "value": f"dn_{index}",
 	                            "style": "danger",
-	                            "action_id": "down_vote"
+	                            "action_id": "dn_vote"
 	                        }
 	                    ]
 					}

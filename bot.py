@@ -95,305 +95,53 @@ def handle_eat():
 
 
 
-global selections 
+global selections  		
 selections = {}
 
 @app.route('/slack/message_actions', methods=['POST'])
 def message_actions():
-	form_json = json.loads(request.form.get('payload'))
-	selection = form_json['actions'][0]['value']
-	print(selection)
+	data = json.loads(request.form.get('payload'))
+	channel_id = data.get('container').get('channel_id')
+	user_id = data.get('user').get('id')
+	msg_timestamp = data.get('container').get('message_ts')
+	btn_eles = data.get('message').get('attachments')[0]['blocks'][1]['elements']
+	
+	selection = data['actions'][0]['value']
+	# print(selection)
 
-	if selection not in selections:
-		selections[selection] = 1
+	category = selection[:2] #up
+	index = selection[-1:] # 0-2
+	# print(category, index)
+
+	if index not in selections:
+		selections[index] = {}
+		selections[index][category] = 1
+		print('d')
+	elif category not in selections[index]: # up != dn
+		selections[index] = {}
+		selections[index][category] = 1
+	elif selections[index][category] == 1:
+		selections[index][category] = 0
+	elif selections[index][category] == 0:
+		selections[index][category] = 1
+	# print(selections) #{'2': {'up': 1}, '3': {'dn': 0}, '1': {'dn': 0}}
+	
+	# print(btn_eles)
+	up_ele = btn_eles[0]
+	dn_ele = btn_eles[1]
+	if 'up' in selections[up_ele.get('value')[-1:]]:
+		print('up')
+		text = f':thumbsup:\t{selections[index][category]}'
+		up_ele['text']['text'] = text
 	else:
-		selections[selection] += 1
-	print(selections)
-	return Response(), 200
+		print('dn')
+		text = f':thumbsdown:\t{selections[index][category]}'
+		dn_ele['text']['text'] = text
 
-
-# https://api.slack.com/best-practices/blueprints/actionable-notifications
-@app.route('/slack/check', methods=['POST'])
-def handle_check():
-	data = request.form	
-	channel_id = data.get('channel_id')
-
-	# TODO: emoji thumbsup and down, connect them to responding menus
-	fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
-
-	print(fields)
-	client.chat_postMessage(
-		channel = channel_id, 
-		attachments = [{
-			"title": ':ballot_box_with_ballot: Votes for selected menus',
-            "fallback": "Upgrade your Slack client to use messages like these.",
-    		"callback_id": 'check votes',
-			'fields': fields,
-			"color": '#EE82EE',
-			"thumb_url":'https://i.imgur.com/Ynmyz2n.png'
-		}]
+	print(data.get('message').get('attachments'))
+	updated_message = client.chat_update(
+		**data.get('message').get('attachments')[0],
+		channel=channel_id,
+		ts=msg_timestamp
 	)
 	return Response(), 200
-
-
-# Call lunch bot using global shortcut
-@app.route('/slack/interactions', methods=['POST'])
-def interactions():
-
-    # print(request.form)
-    # request.form is an immutableMultiDict
-    json_string = request.form.get('payload')   # returns a json string
-    # convert json string to python Dictionary
-    payload = json.loads(json_string)
-
-    # print(payload)
-    global toggleThumbUp 
-    global toggleThumbDown
-    global buttonStates
-    global yesThumb
-    global noThumb
-
-    # For block message interactions
-    if payload['type'] == 'block_actions':
-        if payload['actions'][0]['action_id'] == 'up_vote' or payload['actions'][0]['action_id'] == 'down_vote':
-
-            msg_timestamp = (payload['container']['message_ts']) # timestamp of specific message that the clicked button is from
-            channel_id = (payload['container']['channel_id']) # channel id of message posted in
-            
-            modifiedAttachments = (payload['message']['attachments']) # grab attachment from payload to modify
-            # list of buttons in the message
-            buttonElements = ((modifiedAttachments)[0]['blocks'][2]['elements'])
-
-            clickedButtonId = payload['actions'][0]['action_id'] # ID of thumb button clicked
-            clickedButtonIndex = next((i for i, item in enumerate(buttonElements) if item["action_id"] == clickedButtonId), None)  # Returns none, if not found
-
-            # up_vote and down_vote button indices
-            yesButtonIndex = next((i for i, item in enumerate(buttonElements) if item["action_id"] == 'up_vote'), None)
-            noButtonIndex = next((i for i, item in enumerate(buttonElements) if item["action_id"] == 'down_vote'), None)
-
-            # IF Thumb UP was clicked
-            if clickedButtonId == 'up_vote':
-                print(f'THUMB UP CLICKED = {msg_timestamp}')
-                # no buttonState, create one, 
-                # Result: turn on thumbup, save state for thumbup + thumbdown
-                if buttonStates.get(msg_timestamp) == None:
-                    print(f'NO STATE FOR = {msg_timestamp}')
-                    toggleThumbDown = False
-                    noButtonText = modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'].split()
-                    noVotes = int(noButtonText[1])
-                    
-                
-                    toggleThumbUp = True
-                    yesButtonText = modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'].split()
-                    yesVotes = int(yesButtonText[1])
-                    yesVotes += 1
-                    # color -> green
-                    # "style": "primary",
-                    modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['style'] = 'primary'
-                    updateVote = f'{yesThumb} {yesVotes}'
-
-                    buttonStates[msg_timestamp] = {
-                        'msgID': msg_timestamp,
-                        'yesThumb': {
-                            'id': 'up_vote',
-                            'index': yesButtonIndex,
-                            'toggle': toggleThumbUp,
-                            'emoji': yesThumb,
-                            'votes': yesVotes
-                        },
-                        'noThumb': {
-                            'id': 'down_vote',
-                            'index': noButtonIndex,
-                            'toggle': toggleThumbDown,
-                            'emoji': noThumb,
-                            'votes': noVotes
-                        }
-                    } 
-
-                    modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'] =  updateVote 
-
-                else: # use buttonState
-                    # thumbdown toggled on, thumbup toggled off
-                    # Result: Turn on thumbup
-                    print(f'HAS STATE FOR = {msg_timestamp}')
-                    if buttonStates[msg_timestamp]['noThumb']['toggle'] == True and buttonStates[msg_timestamp]['yesThumb']['toggle'] == False:
-                        print(f'Turn off DOWN, turn on UP = {msg_timestamp}')
-                        toggleThumbDown = False
-                        buttonStates[msg_timestamp]['noThumb']['toggle'] = toggleThumbDown
-                        noVotes = int(buttonStates[msg_timestamp]['noThumb']['votes'])
-                        if noVotes > 0:
-                            noVotes -= 1
-
-                        buttonStates[msg_timestamp]['noThumb']['votes'] = noVotes
-                        updateNoVote = f'{noThumb} {noVotes}'
-                        # change color -> neutral  
-                        # removing key will set style to default gray color
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex].pop('style', None)
-                        # no Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'] = updateNoVote
-                        # -------------------------------
-                        toggleThumbUp = True
-                        buttonStates[msg_timestamp]['yesThumb']['toggle'] = toggleThumbUp
-                        yesVotes = int(buttonStates[msg_timestamp]['yesThumb']['votes'])
-                        yesVotes += 1
-                        buttonStates[msg_timestamp]['yesThumb']['votes'] = yesVotes
-                        updateYesVote = f'{yesThumb} {yesVotes}'
-                        # change color
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['style'] = 'primary'
-                        # yes Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'] = updateYesVote
-
-                    # thumbdown toggled off, thumbup toggled on
-                    # Result: Turn off thumbup
-                    elif buttonStates[msg_timestamp]['noThumb']['toggle'] == False and buttonStates[msg_timestamp]['yesThumb']['toggle'] == True:
-                        print(f'Turn off UP only = {msg_timestamp}')
-                        toggleThumbUp = False
-                        buttonStates[msg_timestamp]['yesThumb']['toggle'] = toggleThumbUp
-                        yesVotes = int(buttonStates[msg_timestamp]['yesThumb']['votes'])
-                        if yesVotes > 0:
-                            yesVotes -= 1
-                            
-                        buttonStates[msg_timestamp]['yesThumb']['votes'] = yesVotes
-                        updateYesVote = f'{yesThumb} {yesVotes}'
-                        # change color -> neutral
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex].pop('style', None)
-                        # yes Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'] = updateYesVote
-
-                    # thumbdown toggled off, thumbup toggled off
-                    # Result: Turn on thumbup
-                    elif buttonStates[msg_timestamp]['noThumb']['toggle'] == False and buttonStates[msg_timestamp]['yesThumb']['toggle'] == False:
-                        print(f'Turn on UP only = {msg_timestamp}') 
-                        toggleThumbUp = True
-                        buttonStates[msg_timestamp]['yesThumb']['toggle'] = toggleThumbUp
-                        yesVotes = int(buttonStates[msg_timestamp]['yesThumb']['votes'])
-                        yesVotes += 1
-                        buttonStates[msg_timestamp]['yesThumb']['votes'] = yesVotes
-                        updateYesVote = f'{yesThumb} {yesVotes}'
-                        # change color -> green
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['style'] = 'primary'
-                        # yes Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'] = updateYesVote
-            #--------------------------------------------------------------------------------------------------------------
-            # IF thumb down was clicked
-            elif clickedButtonId == 'down_vote':
-                print(f'THUMB DOWN CLICKED = {msg_timestamp}')
-                # no buttonState, create one, 
-                # Result: turn on thumbdown, save state for thumbup + thumbdown
-                if buttonStates.get(msg_timestamp) == None:
-                    print(f'NO STATE FOR = {msg_timestamp}')
-                    toggleThumbUp = False
-                    yesButtonText = modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'].split()
-                    yesVotes = int(yesButtonText[1])
-
-                    toggleThumbDown = True
-                    noButtonText = modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'].split()
-                    noVotes = int(noButtonText[1])
-                    noVotes += 1
-                    # color -> red
-                    # "style": "danger" 
-                    modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['style'] = 'danger'
-                    updateVote = f'{noThumb} {noVotes}' 
-                    
-                    buttonStates[msg_timestamp] = {
-                        'msgID': msg_timestamp,
-                        'yesThumb': {
-                            'id': 'up_vote',
-                            'index': yesButtonIndex,
-                            'toggle': toggleThumbUp,
-                            'emoji': yesThumb,
-                            'votes': yesVotes
-                        },
-                        'noThumb': {
-                            'id': 'down_vote',
-                            'index': noButtonIndex,
-                            'toggle': toggleThumbDown,
-                            'emoji': noThumb,
-                            'votes': noVotes
-                        }
-                    } 
-
-                    modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'] = updateVote 
-
-                else: # use buttonState
-                    # Thumbup toggled on, Thumbdown is toggled off
-                    # Result: turn of thumbup, turn on thumbdown
-                    print(f'HAS STATE FOR = {msg_timestamp}')
-                    if buttonStates[msg_timestamp]['yesThumb']['toggle'] == True and buttonStates[msg_timestamp]['noThumb']['toggle'] == False:
-                        print(f'Turn off UP, turn on DOWN = {msg_timestamp}')
-                        toggleThumbUp = False
-                        buttonStates[msg_timestamp]['yesThumb']['toggle'] = toggleThumbUp
-                        yesVotes = int(buttonStates[msg_timestamp]['yesThumb']['votes'])
-                        if yesVotes > 0:
-                            yesVotes -= 1
-
-                        buttonStates[msg_timestamp]['yesThumb']['votes'] = yesVotes
-                        updateYesVote = f'{yesThumb} {yesVotes}'
-                        # change color -> neutral  
-                        # removing key will set style to default gray color
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex].pop('style', None)
-                        # yes Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][yesButtonIndex]['text']['text'] = updateYesVote
-                        # -------------------------------
-
-                        toggleThumbDown = True
-                        buttonStates[msg_timestamp]['noThumb']['toggle'] = toggleThumbDown
-                        noVotes = int(buttonStates[msg_timestamp]['noThumb']['votes'])
-                        noVotes += 1
-                        buttonStates[msg_timestamp]['noThumb']['votes'] = noVotes
-                        updateNoVote = f'{noThumb} {noVotes}'
-                        # change color to RED
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['style'] = 'danger'
-                        # no Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'] = updateNoVote
-
-                    # Thumbup toggled off, Thumbdown is toggled on
-                    # Result: Turn off thumbdown
-                    elif buttonStates[msg_timestamp]['yesThumb']['toggle'] == False and buttonStates[msg_timestamp]['noThumb']['toggle'] == True: 
-                        print(f'Turn off DOWN only = {msg_timestamp}')
-                        toggleThumbDown = False
-                        buttonStates[msg_timestamp]['noThumb']['toggle'] = toggleThumbDown
-                        noVotes = int(buttonStates[msg_timestamp]['noThumb']['votes'])
-                        if noVotes > 0:
-                            noVotes -= 1
-                        
-                        buttonStates[msg_timestamp]['noThumb']['votes'] = noVotes
-                        updateNoVote = f'{noThumb} {noVotes}'
-                        # change color -> neutral
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex].pop('style', None)
-                        # no Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'] = updateNoVote
-
-                    # Thumbup toggled off, Thumbdown is toggled off
-                    # Result: Turn on thumbdown
-                    elif buttonStates[msg_timestamp]['yesThumb']['toggle'] == False and buttonStates[msg_timestamp]['noThumb']['toggle'] == False:
-                        print(f'Turn on DOWN only = {msg_timestamp}') 
-                        toggleThumbDown = True
-                        buttonStates[msg_timestamp]['noThumb']['toggle'] = toggleThumbDown
-                        noVotes = int(buttonStates[msg_timestamp]['noThumb']['votes'])
-                        noVotes += 1
-                        buttonStates[msg_timestamp]['noThumb']['votes'] = noVotes
-                        updateNoVote = f'{noThumb} {noVotes}'
-                        # change color -> RED
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['style'] = 'danger'
-                        # no Thumb update
-                        modifiedAttachments[0]['blocks'][2]['elements'][noButtonIndex]['text']['text'] = updateNoVote
-
-            # print(modifiedAttachments)
-
-            # UPDATE MSG WITH NEW MODIFIED ATTACHMENT
-            client.chat_update(
-                channel=channel_id,
-                ts=msg_timestamp,
-                as_user=True,
-                attachments=modifiedAttachments
-            )
-
-    # for message or global shortcut interactions
-    elif payload['type'] == 'shortcut':
-        print('shortcuct pressed')
-    # for modal interactions
-    elif payload['type'] == 'view_submission':
-        print('modal submitted')
-
-    return Response(), 200
