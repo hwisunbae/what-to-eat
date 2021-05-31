@@ -113,18 +113,20 @@ def message_actions():
 
     category = selection[:2] #up
     index = selection[-1:] # 0-2
-    # print(category, index)
+    # print(f'category: {category} index: {index}')
 
     if index not in selections:
         selections[index] = {}
         selections[index][category] = 1
-        print('d')
+        print('create new btn state')
     elif category not in selections[index]: # up != dn
         selections[index] = {}
         selections[index][category] = 1
     elif selections[index][category] == 1:
+        # if ON, turn off
         selections[index][category] = 0
     elif selections[index][category] == 0:
+        # if OFF, turn on
         selections[index][category] = 1
     # print(selections) #{'2': {'up': 1}, '3': {'dn': 0}, '1': {'dn': 0}}
 
@@ -132,24 +134,25 @@ def message_actions():
     up_ele = btn_eles[0]
     dn_ele = btn_eles[1]
 
-    if 'up' in selections[up_ele.get('value')[-1:]]:
-        print('up')
+    if 'up' in selections[up_ele.get('value')[-1:]]:   # e.g. {'up': 1} 
+        print('update upvote!!!')
         text = f':thumbsup:\t{selections[index][category]}'
         up_ele['text']['text'] = text
+        if 'dn' not in selections[index]:
+            dn_ele['text']['text'] = f':thumbsdown:\t{0}'
     else:
-        print('dn')
+        print('update downvote!!!')
         text = f':thumbsdown:\t{selections[index][category]}'
         dn_ele['text']['text'] = text
+        if 'up' not in selections[index]:
+            up_ele['text']['text'] = f':thumbsup:\t{0}'
 
     # print(type(**data.get('message').get('attachments')[0]))
     # print(data.get('message').get('attachments'))
-
-    # Hold dict in list - List dictionary 
-    newData = []
-    newData.append(data.get('message').get('attachments')[0])
-
+    
+    print((data.get('message').get('attachments')))
     updated_message = client.chat_update(
-        attachments=newData,
+        attachments=(data.get('message').get('attachments')),
         channel=channel_id,
         ts=msg_timestamp,
         as_user=True
