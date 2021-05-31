@@ -1,5 +1,7 @@
 
 .env
 icons
-slack-lunch-bot-311923-ed140fe3bead.json
+service_account.json
 ngrok
+icons
+*.zip
