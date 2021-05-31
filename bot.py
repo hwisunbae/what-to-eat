@@ -15,6 +15,7 @@ from flask import Flask, Response, make_response, request
 from datetime import datetime, timedelta
 
 from WelcomeMessage import *
+from ActionMessage import * 
 
 # Authorize google spread sheet 
 import gspread
@@ -33,10 +34,10 @@ app = Flask(__name__)
 # Slack App credentials for OAuth
 # SLACK_CLIENT_ID = os.environ["SLACK_CLIENT_ID"]
 # SLACK_CLIENT_SECRET = os.environ["SLACK_CLIENT_SECRET"]
-# SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
+SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
 # SLACK_VERIFICATION_TOKEN = os.environ["SLACK_VERIFICATION_TOKEN"]
 # SLACK_BOT_TOKEN = os.environ['SLACK_BOT_TOKEN']
-# slack_events_adapter = SlackEventAdapter(SLACK_SIGNING_SECRET, "/slack/events", app)
+slack_events_adapter = SlackEventAdapter(SLACK_SIGNING_SECRET, "/slack/events", app)
 
 client = WebClient(token=config['SLACK_TOKEN'])
 BOT_ID = client.api_call('auth.test')['user_id']
@@ -59,83 +60,38 @@ SCHEDULED_MESSAGES = [
 	{'text': 'second one', 'post_at': (datetime.now() + timedelta(seconds=50)).timestamp(), 'channel': 'C023502CL2D'}
 ]
 
-# Resources
 COLOURS = ['#36a64f', '#eefc54', '#ef8432', '#d72e1f']
-PHOTOS = ['https://i.imgur.com/ZrZLmZa.png','https://i.imgur.com/TYNURtM.png',
-		  'https://i.imgur.com/Sxjrtso.png','https://i.imgur.com/1nFZsc7.png',
-		  'https://i.imgur.com/aUELdkg.png','https://i.imgur.com/co2D9cl.png',
-		  'https://i.imgur.com/Qwo5n0U.png','https://i.imgur.com/mOg1t1r.png',
-		  'https://i.imgur.com/Vb0ve9u.png','https://i.imgur.com/95FYmFe.png',
-		  'https://i.imgur.com/0jxjDrc.png','https://i.imgur.com/kdyBfuB.png',
-		  'https://i.imgur.com/55Pbyvu.png','https://i.imgur.com/YNj8Ikc.png']
 
 # An example of one of your Flask app's routes
 @app.route("/")
 def hello():
-  return "You are connected!"
+    return "You are connected!"
 
 
 # TODO: lunch-vote should take data from a google sheet and list all items and let the user to vote
 @app.route('/slack/eat', methods=['POST'])
 def handle_eat():
-	try:
-		data = request.form
-		channel_id = data.get('channel_id')
-		user_id = data.get('user_id')
+	# try:
+    data = request.form
+    channel_id = data.get('channel_id')
+    user_id = data.get('user_id')
 
-		# Rander 4 out of the lists
-		lists = worksheet.col_values(1)[1::]
-		num_to_select = len(COLOURS)
-		global selected_items
-		selected_items = random.sample(lists, num_to_select)
-		print(selected_items) #['6', '9', '5', '7']
+    actionMessage = ActionMessage(channel_id, user_id, worksheet)
 
-		for index, item in enumerate(selected_items):
-			row = worksheet.row_values(item)
-			client.chat_postMessage(
-				channel = user_id, 
-				attachments = [{
-					"title": row[1],
-					"title_link": row[2],
-					"fallback": "Upgrade your Slack client to use messages like these.",
-					"callback_id": f"menu_{index}",
-					'fields': [
-						{
-							"title": ":fire: Menu Recommended", 
-							"value": row[4] + ' ' + row[5],
-							'short': True
-						}, {
-							"title": ":walking: Distance", 
-							"value": row[6], 
-							'short': True
-						}, 
-					],
-					"actions": [
-						{
-							"name": f"thumbs_up_{index}",
-							"text": ":thumbsup:\t0",
-							"type": "button",
-							"value": f"thumbs_up_{index}",
-							"style": "primary",
-							"action_id": "up_vote"
-						},
-						{
-							"name": f"thumbs_down_{index}",
-							"text": ":thumbsdown:\t0",
-							"type": "button",
-							"value":  f"thumbs_down_{index}",
-							"style": "danger",
-							"action_id": "down_vote"
-						}
-					],
-					"color": COLOURS[index],
-					"thumb_url": PHOTOS[int(row[7])-1],
-				}]
-			)
-		return Response(), 200
-	except SlackApiError as e:
-		print(f"Error posting message: {e}")
-		return Response(), 500
+    # Rander 4 out of the lists
+    lists = worksheet.col_values(1)[1::]
+    num_to_select = len(COLOURS)
+    global selected_items
+    selected_items = random.sample(lists, num_to_select)
+    print(selected_items) #['6', '9', '5', '7']
+
+    for index, item in enumerate(selected_items):
+        client.chat_postMessage(**actionMessage.get_message(index, item))
+
+    return Response(), 200
+	# except SlackApiError as e:
+	# 	print(f"Error posting message: {e}")
+	# 	return Response(), 500
 
 
 
@@ -441,8 +397,3 @@ def interactions():
         print('modal submitted')
 
     return Response(), 200
-
-
-# if __name__ == '__main__':
-# 	# schcdule_messages(SCHEDULED_MESSAGES)
-# 	app.run(port=5000, debug=True)
