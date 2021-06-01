@@ -162,45 +162,44 @@ def message_actions():
 
 @app.route('/slack/check', methods=['POST'])
 def handle_check():
-    # data = json.loads(request.form.get('payload'))
-    print(request.form.get('payload'))
-    # channel_id = data.get('container').get('channel_id')
+    data = request.form
+    channel_id = data.get('channel_id')
 
     # # TODO: emoji thumbsup and down, connect them to responding menus
     # # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
 
     # print(fields)
-    # client.chat_postMessage({
-    #     'channel': channel_id,
-    #     'attachments': [{
-    #             'fallback': 'this is a fallback message if things fail',
-    #             "color": '#EE82EE',
-	# 			'blocks': [
-	# 				{
-	# 					"type": "section",
-	#                     "text": {
-	#                         "type": "mrkdwn",
-	# 						"text": ':ballot_box_with_ballot:Counted Votes'
-	#                     },
-	#                     "fields": [ # Template
-	#                         {
-	#                             "title": "thumbs_down1",
-	#                             "value": "1",
-    #                             'short': True
-	#                         },
-	#                         {
-	#                             "title": "thumbs_down2",
-	#                             "value": "2",
-    #                             'short': True
-	#                         }
-	#                     ],
-	#                     "accessory": {
-	#                         "type": "image",
-	#                         "image_url": 'https://i.imgur.com/Ynmyz2n.png',
-	#                         "alt_text": 'ALMOST LUNCH TIME!'
-	#                     }
-	# 				}
-	# 			]
-	# 		}]
-    # })
+    client.chat_postMessage({
+        'channel': channel_id,
+        'attachments': [{
+                'fallback': 'this is a fallback message if things fail',
+                "color": '#EE82EE',
+				'blocks': [
+					{
+						"type": "section",
+	                    "text": {
+	                        "type": "mrkdwn",
+							"text": ':ballot_box_with_ballot:Counted Votes'
+	                    },
+	                    "fields": [ # Template
+	                        {
+	                            "title": "thumbs_down1",
+	                            "value": "1",
+                                'short': True
+	                        },
+	                        {
+	                            "title": "thumbs_down2",
+	                            "value": "2",
+                                'short': True
+	                        }
+	                    ],
+	                    "accessory": {
+	                        "type": "image",
+	                        "image_url": 'https://i.imgur.com/Ynmyz2n.png',
+	                        "alt_text": 'ALMOST LUNCH TIME!'
+	                    }
+					}
+				]
+			}]
+    })
     return Response(), 200
