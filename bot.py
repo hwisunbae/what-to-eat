@@ -168,12 +168,14 @@ def handle_check():
     print(formatted_items) # {'up_0': 1, 'dn_1': 1, 'dn_2': 1, 'dn_3': 0}
 
     append_row = [0]*len(ActionMessage.COLOURS)*2
-    rows = worksheet.row_values(1)
-    for index, row in enumerate(rows):
+    cols = worksheet.row_values(1)
+    # omit first date column e.g. cols[1:]
+    for index, col in enumerate(cols[1:]):
         for item in formatted_items.keys():
-            if item == row:
-                print(item, row, index, formatted_items[item])
-                append_row[index-1] = formatted_items[item]
+            if item == col:
+                print(item, col, index, formatted_items[item])
+                # index-1 ----> index b/c date column is omitted
+                append_row[index] = formatted_items[item]
     print(append_row)
     worksheet.append_row([today, *append_row], table_range='A2')
 
