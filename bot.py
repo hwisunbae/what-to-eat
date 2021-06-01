@@ -70,30 +70,29 @@ def hello():
     return "You are connected!"
 
 
-# TODO: lunch-vote should take data from a google sheet and list all items and let the user to vote
 @app.route('/slack/eat', methods=['POST'])
 def handle_eat():
-	# try:
-    data = request.form
-    channel_id = data.get('channel_id')
-    user_id = data.get('user_id')
+    try:
+        data = request.form
+        channel_id = data.get('channel_id')
+        user_id = data.get('user_id')
 
-    actionMessage = ActionMessage(channel_id, user_id, worksheet)
+        actionMessage = ActionMessage(channel_id, user_id, worksheet)
 
-    # Rander 4 out of the lists
-    lists = worksheet.col_values(1)[1::]
-    num_to_select = len(COLOURS)
-    global selected_items
-    selected_items = random.sample(lists, num_to_select)
-    print(selected_items)  # ['6', '9', '5', '7']
+        # Rander 4 out of the lists
+        lists = worksheet.col_values(1)[1::]
+        num_to_select = len(COLOURS)
+        global selected_items
+        selected_items = random.sample(lists, num_to_select)
+        print(selected_items)  # ['6', '9', '5', '7']
 
-    for index, item in enumerate(selected_items):
-        client.chat_postMessage(**actionMessage.get_message(index, item))
+        for index, item in enumerate(selected_items):
+            client.chat_postMessage(**actionMessage.get_message(index, item))
 
-    return Response(), 200
-	# except SlackApiError as e:
-	# 	print(f"Error posting message: {e}")
-	# 	return Response(), 500
+        return Response(), 200
+    except SlackApiError as e:
+        print(f"Error posting message: {e}")
+        return Response(), 500
 
 
 global selections
@@ -158,4 +157,50 @@ def message_actions():
         as_user=True
     )
 
+    return Response(), 200
+
+
+@app.route('/slack/check', methods=['POST'])
+def handle_check():
+    # data = json.loads(request.form.get('payload'))
+    print(request.form.get('payload'))
+    # channel_id = data.get('container').get('channel_id')
+
+    # # TODO: emoji thumbsup and down, connect them to responding menus
+    # # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
+
+    # print(fields)
+    # client.chat_postMessage({
+    #     'channel': channel_id,
+    #     'attachments': [{
+    #             'fallback': 'this is a fallback message if things fail',
+    #             "color": '#EE82EE',
+	# 			'blocks': [
+	# 				{
+	# 					"type": "section",
+	#                     "text": {
+	#                         "type": "mrkdwn",
+	# 						"text": ':ballot_box_with_ballot:Counted Votes'
+	#                     },
+	#                     "fields": [ # Template
+	#                         {
+	#                             "title": "thumbs_down1",
+	#                             "value": "1",
+    #                             'short': True
+	#                         },
+	#                         {
+	#                             "title": "thumbs_down2",
+	#                             "value": "2",
+    #                             'short': True
+	#                         }
+	#                     ],
+	#                     "accessory": {
+	#                         "type": "image",
+	#                         "image_url": 'https://i.imgur.com/Ynmyz2n.png',
+	#                         "alt_text": 'ALMOST LUNCH TIME!'
+	#                     }
+	# 				}
+	# 			]
+	# 		}]
+    # })
     return Response(), 200
