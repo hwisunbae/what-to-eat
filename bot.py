@@ -61,7 +61,8 @@ SCHEDULED_MESSAGES = [
 def hello():
     return "You are connected!"
 
-
+# TODO: Menu should be identical when several users call /eat cmd in a day
+# TODO: When user call /eat the app should check if there's today it should add values onto the stored value
 @app.route('/slack/eat', methods=['POST'])
 def handle_eat():
     try:
@@ -176,9 +177,9 @@ def handle_check():
     print(append_row)
     worksheet.append_row([today, *append_row], table_range='A2')
 
-
-    # # TODO: emoji thumbsup and down, connect them to responding menus
-    # # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
+    # TODO: fetch data from google sheet and render message 
+    # TODO: emoji thumbsup and down, connect them to responding menus
+    # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
 
     # print(fields)
     # client.chat_postMessage(
