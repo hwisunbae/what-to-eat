@@ -12,7 +12,7 @@ from slack_sdk.web import WebClient
 # from slackeventsapi import SlackEventAdapter
 from slack_sdk.errors import SlackApiError
 from flask import Flask, Response, make_response, request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from WelcomeMessage import *
 from ActionMessage import *
@@ -22,7 +22,7 @@ import gspread
 # gc = gspread.service_account(filename=config[CRED_FILENAME])
 gc = gspread.service_account(filename='./service_account.json')
 sh = gc.open("lunchbot")
-worksheet = sh.sheet1
+worksheet = sh.worksheet('Sheet1')
 
 # Keep variables safe
 env_path = Path('.') / '.env'
@@ -42,12 +42,6 @@ app = Flask(__name__)
 client = WebClient(token=config['SLACK_TOKEN'])
 BOT_ID = client.api_call('auth.test')['user_id']
 
-toggleThumbUp = False
-yesThumb = ":thumbsup:"
-toggleThumbDown = False
-noThumb = ":thumbsdown:"
-buttonStates = {}  # Stores states for every single button behavior that exists
-
 # DEBUG
 # CHANNEL_NAME = 'test2'
 # client.chat_postMessage(channel=CHANNEL_NAME, text='App started')
@@ -61,8 +55,6 @@ SCHEDULED_MESSAGES = [
 	{'text': 'second one', 'post_at': (
 	    datetime.now() + timedelta(seconds=50)).timestamp(), 'channel': 'C023502CL2D'}
 ]
-
-COLOURS = ['#36a64f', '#eefc54', '#ef8432', '#d72e1f']
 
 # An example of one of your Flask app's routes
 @app.route("/")
@@ -81,7 +73,7 @@ def handle_eat():
 
         # Rander 4 out of the lists
         lists = worksheet.col_values(1)[1::]
-        num_to_select = len(COLOURS)
+        num_to_select = len(ActionMessage.COLOURS)
         global selected_items
         selected_items = random.sample(lists, num_to_select)
         print(selected_items)  # ['6', '9', '5', '7']
@@ -117,7 +109,6 @@ def message_actions():
     if index not in selections:
         selections[index] = {}
         selections[index][category] = 1
-        print('create new btn state')
     elif category not in selections[index]: # up != dn
         selections[index] = {}
         selections[index][category] = 1
@@ -134,13 +125,13 @@ def message_actions():
     dn_ele = btn_eles[1]
 
     if 'up' in selections[up_ele.get('value')[-1:]]:   # e.g. {'up': 1} 
-        print('update upvote!!!')
+        print('upvote!')
         text = f':thumbsup:\t{selections[index][category]}'
         up_ele['text']['text'] = text
         if 'dn' not in selections[index]:
             dn_ele['text']['text'] = f':thumbsdown:\t{0}'
     else:
-        print('update downvote!!!')
+        print('downvote!')
         text = f':thumbsdown:\t{selections[index][category]}'
         dn_ele['text']['text'] = text
         if 'up' not in selections[index]:
@@ -149,7 +140,7 @@ def message_actions():
     # print(type(**data.get('message').get('attachments')[0]))
     # print(data.get('message').get('attachments'))
     
-    print((data.get('message').get('attachments')))
+    # print((data.get('message').get('attachments')))
     updated_message = client.chat_update(
         attachments=(data.get('message').get('attachments')),
         channel=channel_id,
@@ -164,42 +155,53 @@ def message_actions():
 def handle_check():
     data = request.form
     channel_id = data.get('channel_id')
+    today = date.today().strftime('%b-%d-%Y')
+    worksheet = sh.worksheet('Sheet2')
+
+    # Make selections in the right form in worksheet
+    # print(selections) # {'3': {'up': 1}, '1': {'up': 1}, '2': {'up': 1}}
+    formatted_items = {}
+    for index, sel in enumerate(selections):
+        item = f'{list(selections[sel].keys())[0]}_{sel}'
+        formatted_items[item] = list(selections[sel].values())[0]
+    print(formatted_items) # {'up_0': 1, 'dn_1': 1, 'dn_2': 1, 'dn_3': 0}
+
+    append_row = [0]*len(ActionMessage.COLOURS)*2
+    rows = worksheet.row_values(1)
+    for index, row in enumerate(rows):
+        for item in formatted_items.keys():
+            if item == row:
+                print(item, row, index, formatted_items[item])
+                append_row[index-1] = formatted_items[item]
+    print(append_row)
+    worksheet.append_row([today, *append_row], table_range='A2')
+
 
     # # TODO: emoji thumbsup and down, connect them to responding menus
     # # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
 
     # print(fields)
-    client.chat_postMessage({
-        'channel': channel_id,
-        'attachments': [{
-                'fallback': 'this is a fallback message if things fail',
-                "color": '#EE82EE',
-				'blocks': [
-					{
-						"type": "section",
-	                    "text": {
-	                        "type": "mrkdwn",
-							"text": ':ballot_box_with_ballot:Counted Votes'
-	                    },
-	                    "fields": [ # Template
-	                        {
-	                            "title": "thumbs_down1",
-	                            "value": "1",
-                                'short': True
-	                        },
-	                        {
-	                            "title": "thumbs_down2",
-	                            "value": "2",
-                                'short': True
-	                        }
-	                    ],
-	                    "accessory": {
-	                        "type": "image",
-	                        "image_url": 'https://i.imgur.com/Ynmyz2n.png',
-	                        "alt_text": 'ALMOST LUNCH TIME!'
-	                    }
-					}
-				]
-			}]
-    })
+    # client.chat_postMessage(
+	# 	channel = channel_id, 
+	# 	attachments = [{
+	# 		"title": ':ballot_box_with_ballot: Votes for selected menus',
+    #         "fallback": "Upgrade your Slack client to use messages like these.",
+    # 		"callback_id": 'check votes',
+	# 		'fields': [ # Template
+    #                     {
+    #                         "title": "thumbs_down1",
+    #                         "value": "1",
+    #                         'short': True
+    #                     },
+    #                     {
+    #                         "title": "thumbs_down2",
+    #                         "value": "2",
+    #                         'short': True
+    #                     }
+	#                     ],
+	# 		"color": '#EE82EE',
+	# 		"thumb_url":'https://i.imgur.com/Ynmyz2n.png'
+	# 	}]
+	# )
+    
     return Response(), 200
