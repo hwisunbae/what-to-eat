@@ -1,6 +1,6 @@
 # Need to run -> ngrok http 5000
 
-import os
+# import os
 import random
 import json
 
@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, date
 
 from WelcomeMessage import *
 from ActionMessage import *
+from VotesMessage import *
 
 # Authorize google spread sheet
 import gspread
@@ -80,7 +81,11 @@ def handle_eat():
         print(selected_items)  # ['6', '9', '5', '7']
 
         for index, item in enumerate(selected_items):
-            client.chat_postMessage(**actionMessage.get_message(index, item))
+            print(index, item)
+            # /eat1
+            print(worksheet.row_values(item))     
+            # client.chat_postMessage(**actionMessage.get_message(index, item))
+            
 
         return Response(), 200
     except SlackApiError as e:
@@ -156,6 +161,7 @@ def message_actions():
 def handle_check():
     data = request.form
     channel_id = data.get('channel_id')
+    user_id = data.get('user_id')
     today = date.today().strftime('%b-%d-%Y')
     worksheet = sh.worksheet('Sheet2')
 
@@ -177,11 +183,28 @@ def handle_check():
                 # index-1 ----> index b/c date column is omitted
                 append_row[index] = formatted_items[item]
     print(append_row)
-    worksheet.append_row([today, *append_row], table_range='A2')
+    # worksheet.append_row([today, *append_row], table_range='A2')
 
     # TODO: fetch data from google sheet and render message 
     # TODO: emoji thumbsup and down, connect them to responding menus
     # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
+    # print(selections.items())
+
+    # TODO: locate date row, fetch from that row only 
+    # TODO: each 2 columns of up/dn is 1 menu, TOTAL 4 menus
+     
+    # cell = worksheet.find(today) 
+    cell = worksheet.find("Jun-02-2021")
+    voteData = worksheet.row_values(cell.row)[1:] # omit date column [1:]
+    votes = []
+    
+
+    for i in range(0,len(voteData),2):
+        # [['1', '0'], ['new data3', 'new data4'], ['new data5', 'new data6'], ['new data7', 'new data8']]
+        votes.append(voteData[i:i+2]) 
+
+    votesMessage = VotesMessage(channel_id, user_id, worksheet)
+    client.chat_postMessage(**votesMessage.get_message(selected_items, votes))
 
     # print(fields)
     # client.chat_postMessage(
