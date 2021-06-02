@@ -23,7 +23,7 @@ import gspread
 # gc = gspread.service_account(filename=config[CRED_FILENAME])
 gc = gspread.service_account(filename='./service_account.json')
 sh = gc.open("lunchbot")
-worksheet = sh.worksheet('Sheet1')
+lunchWorksheet = sh.worksheet('Sheet1')
 
 # Keep variables safe
 env_path = Path('.') / '.env'
@@ -57,6 +57,11 @@ SCHEDULED_MESSAGES = [
 	    datetime.now() + timedelta(seconds=50)).timestamp(), 'channel': 'C023502CL2D'}
 ]
 
+# GLOBAL VARIABLES
+selected_items = []
+
+
+
 # An example of one of your Flask app's routes
 @app.route("/")
 def hello():
@@ -71,20 +76,19 @@ def handle_eat():
         channel_id = data.get('channel_id')
         user_id = data.get('user_id')
 
-        actionMessage = ActionMessage(channel_id, user_id, worksheet)
+        actionMessage = ActionMessage(channel_id, user_id, lunchWorksheet)
 
         # Rander 4 out of the lists
-        lists = worksheet.col_values(1)[1::]
+        lists = lunchWorksheet.col_values(1)[1::]
         num_to_select = len(ActionMessage.COLOURS)
         global selected_items
         selected_items = random.sample(lists, num_to_select)
         print(selected_items)  # ['6', '9', '5', '7']
 
         for index, item in enumerate(selected_items):
-            print(index, item)
-            # /eat1
-            print(worksheet.row_values(item))     
-            # client.chat_postMessage(**actionMessage.get_message(index, item))
+            # print(index, item)
+            # print(lunchWorksheet.row_values(item))     
+            client.chat_postMessage(**actionMessage.get_message(index, item))
             
 
         return Response(), 200
@@ -159,11 +163,13 @@ def message_actions():
 
 @app.route('/slack/check', methods=['POST'])
 def handle_check():
+    global selected_items
+    
     data = request.form
     channel_id = data.get('channel_id')
     user_id = data.get('user_id')
     today = date.today().strftime('%b-%d-%Y')
-    worksheet = sh.worksheet('Sheet2')
+    voteWorksheet = sh.worksheet('Sheet2')
 
     # Make selections in the right form in worksheet
     # print(selections) # {'3': {'up': 1}, '1': {'up': 1}, '2': {'up': 1}}
@@ -174,60 +180,30 @@ def handle_check():
     print(formatted_items) # {'up_0': 1, 'dn_1': 1, 'dn_2': 1, 'dn_3': 0}
 
     append_row = [0]*len(ActionMessage.COLOURS)*2
-    cols = worksheet.row_values(1)
-    # omit first date column e.g. cols[1:]
-    for index, col in enumerate(cols[1:]):
+    cols = voteWorksheet.row_values(1)
+    for index, col in enumerate(cols[1:]): # omit first date column e.g. cols[1:]
         for item in formatted_items.keys():
             if item == col:
                 print(item, col, index, formatted_items[item])
-                # index-1 ----> index b/c date column is omitted
-                append_row[index] = formatted_items[item]
+                append_row[index] = formatted_items[item] # index-1 ----> index b/c date column is omitted 
     print(append_row)
-    # worksheet.append_row([today, *append_row], table_range='A2')
+    voteWorksheet.append_row([today, *append_row], table_range='A2')
 
     # TODO: fetch data from google sheet and render message 
     # TODO: emoji thumbsup and down, connect them to responding menus
     # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
     # print(selections.items())
 
-    # TODO: locate date row, fetch from that row only 
-    # TODO: each 2 columns of up/dn is 1 menu, TOTAL 4 menus
-     
-    # cell = worksheet.find(today) 
-    cell = worksheet.find("Jun-02-2021")
-    voteData = worksheet.row_values(cell.row)[1:] # omit date column [1:]
+    cell = voteWorksheet.find(today) # voteWorksheet.find("Jun-02-2021")
+    voteData = voteWorksheet.row_values(cell.row)[1:] # omit date column [1:]
     votes = []
     
-
     for i in range(0,len(voteData),2):
-        # [['1', '0'], ['new data3', 'new data4'], ['new data5', 'new data6'], ['new data7', 'new data8']]
         votes.append(voteData[i:i+2]) 
+         #            lunch0                      lunch1                         lunch2                     lunch3
+        # votes: [['newdata1', 'newdata2'], ['new data3', 'new data4'], ['new data5', 'new data6'], ['new data7', 'new data8']]
 
-    votesMessage = VotesMessage(channel_id, user_id, worksheet)
+    votesMessage = VotesMessage(channel_id, user_id, lunchWorksheet)
     client.chat_postMessage(**votesMessage.get_message(selected_items, votes))
-
-    # print(fields)
-    # client.chat_postMessage(
-	# 	channel = channel_id, 
-	# 	attachments = [{
-	# 		"title": ':ballot_box_with_ballot: Votes for selected menus',
-    #         "fallback": "Upgrade your Slack client to use messages like these.",
-    # 		"callback_id": 'check votes',
-	# 		'fields': [ # Template
-    #                     {
-    #                         "title": "thumbs_down1",
-    #                         "value": "1",
-    #                         'short': True
-    #                     },
-    #                     {
-    #                         "title": "thumbs_down2",
-    #                         "value": "2",
-    #                         'short': True
-    #                     }
-	#                     ],
-	# 		"color": '#EE82EE',
-	# 		"thumb_url":'https://i.imgur.com/Ynmyz2n.png'
-	# 	}]
-	# )
-    
+      
     return Response(), 200
