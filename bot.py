@@ -186,13 +186,23 @@ def handle_check():
             if item == col:
                 print(item, col, index, formatted_items[item])
                 append_row[index] = formatted_items[item] # index-1 ----> index b/c date column is omitted 
-    print(append_row)
-    voteWorksheet.append_row([today, *append_row], table_range='A2')
+    print(append_row) # [0, 0, 0, 0, 0, 0, 0, 0]
 
-    # TODO: fetch data from google sheet and render message 
-    # TODO: emoji thumbsup and down, connect them to responding menus
-    # fields = [{'title': title, 'value': vote, 'short': True} for title, vote in selections.items()]
-    # print(selections.items())
+    list_of_dicts = voteWorksheet.col_values(1)
+    if today in list_of_dicts:
+        print('in list')
+        # print([today, *append_row])
+        cell_today = voteWorksheet.find(today)
+        print(cell_today.row, cell_today.col) # 3 1
+
+        cell_list = voteWorksheet.range(f'B{cell_today.row}:I{cell_today.row}')
+        for i, val in enumerate(append_row):
+            cell_list[i].value = val
+        voteWorksheet.update_cells(cell_list)
+
+    else:
+        print('not in list')
+        voteWorksheet.append_row([today, *append_row], table_range='A2')
 
     cell = voteWorksheet.find(today) # voteWorksheet.find("Jun-02-2021")
     voteData = voteWorksheet.row_values(cell.row)[1:] # omit date column [1:]
