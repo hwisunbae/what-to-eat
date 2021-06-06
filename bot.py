@@ -1,5 +1,7 @@
 # Need to run -> ngrok http 5000
 
+import time
+import asyncio
 # import os
 import random
 import json
@@ -8,10 +10,11 @@ import json
 from config import config
 from pathlib import Path
 from dotenv import load_dotenv
-from slack_sdk.web import WebClient
+# from slack_sdk.web import WebClient
+from slack_sdk.web.async_client import AsyncWebClient
 # from slackeventsapi import SlackEventAdapter
 from slack_sdk.errors import SlackApiError
-from flask import Flask, Response, make_response, request
+from quart import Quart, Response, make_response, request
 from datetime import datetime, timedelta, date
 
 from WelcomeMessage import *
@@ -30,7 +33,7 @@ env_path = Path('.') / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # Initialize a Flask app to host the events adapter
-app = Flask(__name__)
+app = Quart(__name__)
 
 # Slack App credentials for OAuth
 # SLACK_CLIENT_ID = os.environ["SLACK_CLIENT_ID"]
@@ -40,8 +43,8 @@ app = Flask(__name__)
 # SLACK_BOT_TOKEN = os.environ['SLACK_BOT_TOKEN']
 # slack_events_adapter = SlackEventAdapter(SLACK_SIGNING_SECRET, "/slack/events", app)
 
-client = WebClient(token=config['SLACK_TOKEN'])
-BOT_ID = client.api_call('auth.test')['user_id']
+client = AsyncWebClient(token=config['SLACK_TOKEN'])
+# BOT_ID = client.api_call('auth.test')['user_id']
 
 # DEBUG
 # CHANNEL_NAME = 'test2'
@@ -70,9 +73,9 @@ def hello():
 # TODO: Menu should be identical when several users call /eat cmd in a day
 # TODO: When user call /eat the app should check if there's today it should add values onto the stored value
 @app.route('/slack/eat', methods=['POST'])
-def handle_eat():
+async def handle_eat():
     try:
-        data = request.form
+        data = await request.form
         channel_id = data.get('channel_id')
         user_id = data.get('user_id')
 
@@ -85,13 +88,17 @@ def handle_eat():
         selected_items = random.sample(lists, num_to_select)
         print(selected_items)  # ['6', '9', '5', '7']
 
+        start = time.time()
         for index, item in enumerate(selected_items):
             # print(index, item)
             # print(lunchWorksheet.row_values(item))     
-            client.chat_postMessage(**actionMessage.get_message(index, item))
-            
-
+            test = await client.chat_postMessage(**actionMessage.get_message(index, item))
+        end = time.time() 
+        print(f'seconds: {end - start}')
+        
+        print('!@@@@@@@@@@@@@@@@@@@@@@@@@222')
         return Response(), 200
+        
     except SlackApiError as e:
         print(f"Error posting message: {e}")
         return Response(), 500
@@ -217,3 +224,8 @@ def handle_check():
     client.chat_postMessage(**votesMessage.get_message(selected_items, votes))
       
     return Response(), 200
+
+
+
+if __name__ == '__main__':
+    app.run(port=6767, debug=True)
