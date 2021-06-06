@@ -58,3 +58,17 @@ https://flask.palletsprojects.com/en/1.1.x/server/#server
 
 # Further Development
 1. Schedule  message before lunch using schcdule_messages
+
+# Version 1
+How to run
+```
+flask run
+```
+
+# Version 2 (`async` version)
+How to run
+```
+source venv/bin/activate
+python3 bot.py
+```
+

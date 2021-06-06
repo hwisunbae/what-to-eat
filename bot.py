@@ -97,7 +97,7 @@ async def handle_eat():
         print(f'seconds: {end - start}')
         
         print('!@@@@@@@@@@@@@@@@@@@@@@@@@222')
-        return Response(), 200
+        return Response(''), 200
         
     except SlackApiError as e:
         print(f"Error posting message: {e}")
@@ -109,15 +109,16 @@ selections = {}
 
 
 @app.route('/slack/message_actions', methods=['POST'])
-def message_actions():
-    data = json.loads(request.form.get('payload'))
-    channel_id = data.get('container').get('channel_id')
-    user_id = data.get('user').get('id')
-    msg_timestamp = data.get('container').get('message_ts')
-    btn_eles = data.get('message').get('attachments')[0]['blocks'][1]['elements']
+async def message_actions():
+    data = await request.form
+    json_data = json.loads(data['payload'])
+    channel_id = json_data.get('container').get('channel_id')
+    user_id = json_data.get('user').get('id')
+    msg_timestamp = json_data.get('container').get('message_ts')
+    btn_eles = json_data.get('message').get('attachments')[0]['blocks'][1]['elements']
 
-    selection = data['actions'][0]['value']
-    # print(selection)
+    selection = json_data['actions'][0]['value']
+    print(selection)
 
     category = selection[:2] #up
     index = selection[-1:] # 0-2
@@ -158,21 +159,21 @@ def message_actions():
     # print(data.get('message').get('attachments'))
     
     # print((data.get('message').get('attachments')))
-    updated_message = client.chat_update(
-        attachments=(data.get('message').get('attachments')),
+    updated_message = await client.chat_update(
+        attachments=(json_data.get('message').get('attachments')),
         channel=channel_id,
         ts=msg_timestamp,
         as_user=True
     )
 
-    return Response(), 200
+    return Response(''), 200
 
 
 @app.route('/slack/check', methods=['POST'])
-def handle_check():
+async def handle_check():
     global selected_items
     
-    data = request.form
+    data = await request.form
     channel_id = data.get('channel_id')
     user_id = data.get('user_id')
     today = date.today().strftime('%b-%d-%Y')
@@ -221,9 +222,9 @@ def handle_check():
         # votes: [['newdata1', 'newdata2'], ['new data3', 'new data4'], ['new data5', 'new data6'], ['new data7', 'new data8']]
 
     votesMessage = VotesMessage(channel_id, user_id, lunchWorksheet)
-    client.chat_postMessage(**votesMessage.get_message(selected_items, votes))
+    await client.chat_postMessage(**votesMessage.get_message(selected_items, votes))
       
-    return Response(), 200
+    return Response(''), 200
 
 
 
