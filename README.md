@@ -45,14 +45,16 @@ Request URL : https://request_url.io/whattoeat
 Interactivity & Shortcuts
 Request URL : https://request_url.io/slack/message_actions
 
-# Flask links
-https://flask.palletsprojects.com/en/1.1.x/quickstart/#quickstart
+# 💡 Topic
+
+- **A slack bot that picks lunch for your team**
+- Integration with google spread sheet that has a list of several nearby restaurants
+
+# 📝 Summary
+
+While working for CaseWare International Inc., my team went out for lunch rather than packing their lunch every Friday. The team had to talk about where to go and what to eat for lunch 30 mins before lunch time. So, I came up with an idea of a slack lunch bot which displays a list of nearby restaurants with main menu. This lunch bot randomly picks up 4 places from a linked google sheet, counts votes and displays which one get the most votes.
 
 
-https://flask.palletsprojects.com/en/1.1.x/cli/#cli
-
-
-https://flask.palletsprojects.com/en/1.1.x/server/#server
 
 
 
