@@ -1,5 +1,5 @@
 
-# lunchbot
+# What To Eat
 
 # PIPENV PACKAGE MANAGER 
 ```
